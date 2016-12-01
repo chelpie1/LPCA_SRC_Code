@@ -1,4 +1,4 @@
-function [ DICT_full_stacked, r_1] = Local_PCA( A_train_stacked, quant_train, d_vect, n )
+function [ DICT_full_stacked, r_1] = Local_PCA( X_tr_stacked, quant_train, d_vect, n )
 
 % Mon Feb 15 04:36:59 2016 written by Chelsea Weaver
 %
@@ -6,18 +6,18 @@ function [ DICT_full_stacked, r_1] = Local_PCA( A_train_stacked, quant_train, d_
 % the LPCA-SRC classification algorithm. It uses the local PCA technique of 
 % Singer and Wu (2012) to compute the tangent vectors. 
 %
-% Inputs: A_train_stacked: A 3D array of training data, with first
+% Inputs: X_tr_stacked: A 3D array of training data, with first
 %             dimension corresponding to feature, second dimension 
 %             corresponding to training sample, and third dimension 
 %             corresponding to class
-%        quant_train: Vector of length K (K = # of classes) with lth entry
+%        quant_train: Vector of length L (L = # of classes) with lth entry
 %             corresponding to the number of training points in the lth
 %             class
-%        d_vect: Vector of length K with lth entry corresponding to the
+%        d_vect: Vector of length L with lth entry corresponding to the
 %                intrinsic dimension of the lth class (user-specified)
 %        n: number of neighbors for use in local PCA (user-specified)
 %
-% Outputs: DICT_full_stacked: (m x n_train x K) 3D array with
+% Outputs: DICT_full_stacked: (m x n_train x L) 3D array with
 %               DICT_full_stacked(:,:,l) corresponding to the decomposition 
 %               dictionary for the lth class. Columns mod (d+1) correspond
 %               to the original training vectors in the lth class with the
@@ -27,39 +27,39 @@ function [ DICT_full_stacked, r_1] = Local_PCA( A_train_stacked, quant_train, d_
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[m,~,K] = size(A_train_stacked);
+[m,~,L] = size(X_tr_stacked);
 
 % Initialize matrix that will store results:
-DICT_full_stacked = zeros(m, (max(d_vect)+1)*max(quant_train), K); 
+DICT_full_stacked = zeros(m, (max(d_vect)+1)*max(quant_train), L); 
 
 % Compute r_1:
-    PREP_r_1 = zeros(max(quant_train), K);
+    PREP_r_1 = zeros(max(quant_train), L);
     % Compute median distance between each training point and its (n+1)st 
     % nearest neighbor:
-    for l=1:K
-        A_train_l = A_train_stacked(:,1:quant_train(l),l);
-        atria = nn_prepare(A_train_l');
+    for l=1:L
+        X_tr_l = X_tr_stacked(:,1:quant_train(l),l);
+        atria = nn_prepare(X_tr_l');
         for i=1:quant_train(l)
-            x_i = A_train_stacked(:,i,l);
-            [~,D] = nn_search(A_train_l',atria,x_i',n+2);
+            x_i = X_tr_stacked(:,i,l);
+            [~,D] = nn_search(X_tr_l',atria,x_i',n+2);
             PREP_r_1(i,l) = D(end);
         end
     end
     r_1 = median(PREP_r_1(:));
 
 % Compute tangent vectors:
-for l=1:K     
+for l=1:L     
     DICT_Class_l = zeros(m,quant_train(l)*(d_vect(l)+1));
-    A_train_l = A_train_stacked(:,1:quant_train(l),l);
-    atria = nn_prepare(A_train_l');
+    X_tr_l = X_tr_stacked(:,1:quant_train(l),l);
+    atria = nn_prepare(X_tr_l');
     for i=1:quant_train(l); 
-        x_i = A_train_l(:,i);
+        x_i = X_tr_l(:,i);
         DICT_x_i = zeros(m,d_vect(l)+1); % Will contain x_i and the shifted 
                            % and scaled tangent plane basis vectors at x_i.
             
         % Find the n-nearest neighbors of x_i in the same class:
-            [IDX,DIST] = nn_search(A_train_l', atria, x_i', n+2);
-            Neighbors_i = A_train_l(:,IDX);
+            [IDX,DIST] = nn_search(X_tr_l', atria, x_i', n+2);
+            Neighbors_i = X_tr_l(:,IDX);
             Neighbors_i(:,1) = []; % delete x_i
 
         % Compute epsilon_pca and weight matrix D_i:
