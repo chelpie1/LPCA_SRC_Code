@@ -1,5 +1,5 @@
 function [ ulab, t, Avg_LEN, Accuracy, Avg_Hom_Iter, Avg_Hom_Time ] ...
-    = LPCA_SRC_function( X_train, lab, X_test, n, varargin )
+    = LPCA_SRC_function( X_tr, lab, X_te, n, varargin )
 
 % Mon Feb 15 04:36:59 2016 written by Chelsea Weaver
 %
@@ -26,7 +26,7 @@ function [ ulab, t, Avg_LEN, Accuracy, Avg_Hom_Iter, Avg_Hom_Time ] ...
 %                   'd_option': Specify how to set d. 0 ~ manually, 1 ~
 %                       using Danco algorithm
 %                   'd_vect': Manual specification of intrinsic class
-%                       dimension for each class (Kx1 vector for K = # of classes)
+%                       dimension for each class (Lx1 vector for L = # of classes)
 %
 % Outputs: ulab_LPCA_SRC: Vector of class assignments
 %          t: runtime
