@@ -1,5 +1,5 @@
 function [ ulab, t, Avg_LEN, Accuracy, Avg_Hom_Iter, Avg_Hom_Time ] ...
-    = LPCA_SRC_function( A_train, lab, A_test, n, varargin )
+    = LPCA_SRC_function( X_train, lab, X_test, n, varargin )
 
 % Mon Feb 15 04:36:59 2016 written by Chelsea Weaver
 %
@@ -10,9 +10,9 @@ function [ ulab, t, Avg_LEN, Accuracy, Avg_Hom_Iter, Avg_Hom_Time ] ...
 % Note that there is also a script version of this function titled
 % "LPCA_SRC.m"
 %
-% Inputs: A_train: Matrix of training data with rows corresponding to 
+% Inputs: X_tr: Matrix of training data with rows corresponding to 
 %               features and columns corresponding to samples
-%         A_test: Matrix of test data
+%         X_te: Matrix of test data
 %         lab: Vector of training labels
 %         varargin: 'test_label': Ground truth label for test data
 %                   'optimization_algorithm': Specify which
@@ -109,18 +109,18 @@ tic
 
 % Extract information from training data:
 
-[m,n_train] = size(A_train);
+[m,n_tr] = size(X_tr);
 
-K = length(unique(lab)); % # of classes
+L = length(unique(lab)); % # of classes
 
-quant_train = zeros(K,1); % # of training points in each class
-for l=1:K
+quant_train = zeros(L,1); % # of training points in each class
+for l=1:L
     quant_train(l) = nnz(lab==l);
 end
 
 if ~exist('d_vect','var')
     if d_opt == 0
-        d_vect = ones(K,1); % Sets d_vect to be all 1's by default.
+        d_vect = ones(L,1); % Sets d_vect to be all 1's by default.
     elseif d_opt == 1
         warning('Ignoring user specification: Setting d_vect automatically')
     end
@@ -128,39 +128,39 @@ end
 
 % Set d_vect if needed:
 if d_opt == 1; % if using an estimation algorithm:
-    d_vect = zeros(K,1);
+    d_vect = zeros(L,1);
     for l=1:K
         class_l_index = lab==l;
-        A_train_l = A_train(:,class_l_index);
-        d_vect(l) = DANCo(A_train_l);
+        X_tr_l = X_tr(:,class_l_index);
+        d_vect(l) = DANCo(X_tr_l);
     end
 end
 
 % Normalize training data:
-A_train_norm = Normalize(A_train);
+X_tr_norm = Normalize(X_tr);
 
 % Stack training data by class:
-A_train_stacked = zeros(m,max(quant_train),K);
-for l=1:K
+X_tr_stacked = zeros(m,max(quant_train),L);
+for l=1:L
     class_l_index = lab==l; 
-    A_train_stacked(:,1:quant_train(l),l) = A_train_norm(:,class_l_index);
+    X_tr_stacked(:,1:quant_train(l),l) = X_tr_norm(:,class_l_index);
 end
 
 % Compute tangent vectors and neighborhood radius parameter r:
 [ DICT_full_stacked, r_1] = ...
-    Local_PCA( A_train_stacked, quant_train, d_vect, n );
+    Local_PCA( X_tr_stacked, quant_train, d_vect, n );
 
 % Write DICT_full_stacked as a 2D matrix and compute label vector as well
 % as an index vector of training points in DICT_full:
 DICT_full = zeros(m,dot(quant_train,(d_vect+1)));
 lab_DICT_full = zeros(1,dot(quant_train,(d_vect+1)));
-train_pt_ind = zeros(n_train,1); 
+train_pt_ind = zeros(n_tr,1); 
 % Note that lab_DICT_full(train_pt_ind(i)) will retrieve the class of the
-% ith training point in A_train.
+% ith training point in X_tr.
 
 count_1 = 1;
 count_2 = 1;
-for l=1:K
+for l=1:L
     
     DICT_full(:,count_1:count_1+quant_train(l)*(d_vect(l)+1)-1) = ...
         DICT_full_stacked(:,1:quant_train(l)*(d_vect(l)+1),l);
@@ -177,38 +177,38 @@ end
 
 % Extract information from test data:
 
-[~,n_test] = size(A_test);
+[~,n_te] = size(X_te);
 
 % Normalize test data:
-A_test_norm = Normalize(A_test);
+X_te_norm = Normalize(X_te);
 
 % Compute average number of columns in dictionary after r constraint:
-len_DICT = zeros(n_test,1);
+len_DICT = zeros(n_te,1);
 
 % Store HOMOTOPY statistics:
 if alg_opt == 1
     % Number of iterations in HOMOTOPY algorithm:
-    ITER = zeros(n_test,1);
+    ITER = zeros(n_te,1);
     % Computation time of HOMOTOPY algorithm:
-    TIME = zeros(n_test,1);
+    TIME = zeros(n_te,1);
 end
 
 % Initialize test label vector:
-ulab = zeros(n_test,1);
+ulab = zeros(n_te,1);
 
 % Begin classification:
 
-for j=1:n_test
-    y = A_test_norm(:,j);
+for j=1:n_te
+    y = X_te_norm(:,j);
     
     DICT_y = zeros(size(DICT_full));
     lab_DICT_y = zeros(length(lab_DICT_full));
     
     % Compute distances between the test point and each training point:
-    dist_vects_pos = repmat(y,1,n_train)-A_train_norm;
+    dist_vects_pos = repmat(y,1,n_tr)-X_te;
     DIST_pos = sqrt(sum(dist_vects_pos.^2,1))';
     
-    dist_vects_neg = repmat(y,1,n_train)+A_train_norm;
+    dist_vects_neg = repmat(y,1,n_tr)+X_te;
     DIST_neg = sqrt(sum(dist_vects_neg.^2,1))';
     
     % Compute minimum distance from y to a class rep
@@ -283,8 +283,8 @@ for j=1:n_test
     end
     
     % Compute class error for each class:
-    ERR_y = zeros(1,K);
-    for l=1:K
+    ERR_y = zeros(1,L);
+    for l=1:L
         coeff = zeros(len_DICT(j),1);
         ind_l = find(lab_DICT_y==l);
         if isempty(ind_l)==0 % if DICT_j contains vectors from class l
@@ -306,7 +306,7 @@ end
 %% Compute accuracy:
 
 if exist('ulab_GT','var')
-    Accuracy = nnz(ulab == ulab_GT)/n_test;
+    Accuracy = nnz(ulab == ulab_GT)/n_te;
 end
 
 %% Compute statistics:
