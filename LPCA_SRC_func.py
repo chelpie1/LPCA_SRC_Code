@@ -14,10 +14,10 @@ al. 2009) as proposed in the paper
 
 
 
-Inputs: X_train: Matrix of training data with rows corresponding to 
+Inputs: X_tr: Matrix of training data with rows corresponding to 
             features and columns corresponding to samples
         lab: Vector of training labels
-        X_test: Matrix of test data
+        X_te: Matrix of test data
         ulab_GT: Ground truth label for test data
         epsilon: error/sparsity tradeoff parameter in l1-minimization
             Default is epsilon = 0.001
@@ -50,7 +50,7 @@ Required scripts/functions:
     
 
 """
-def LPCA_SRC_func( X_train, lab, X_test, ulab_GT, epsilon=None, occ_on=None, n=None, d_vect=None ):
+def LPCA_SRC_func( X_tr, lab, X_te, ulab_GT, epsilon=None, occ_on=None, n=None, d_vect=None ):
 
     import numpy as np
     
@@ -61,7 +61,7 @@ def LPCA_SRC_func( X_train, lab, X_test, ulab_GT, epsilon=None, occ_on=None, n=N
 
     # Extract information from training data:
 
-    m, n_train = np.shape(X_train)
+    m, n_tr = np.shape(X_tr)
     L = len(np.unique(np.asarray(lab))) # of classes
 
     quant_train = np.zeros((L,1)) # number of training points in each class
@@ -80,19 +80,19 @@ def LPCA_SRC_func( X_train, lab, X_test, ulab_GT, epsilon=None, occ_on=None, n=N
     
     # Normalize training data:
     from Normalize import Normalize
-    X_train_norm = Normalize(X_train)
+    X_tr_norm = Normalize(X_tr)
 
     # Stack training data by class:
     n_max_l = int(max(quant_train)) # max class size
-    X_train_stacked = np.zeros((m,n_max_l,L))
+    X_tr_stacked = np.zeros((m,n_max_l,L))
     for l in range(L):
         n_l = int(quant_train[l])
         class_l_index = list(np.where(lab==l)[0])
-        X_train_stacked[:,0:n_l,l] = X_train_norm[:,class_l_index]
+        X_tr_stacked[:,0:n_l,l] = X_tr_norm[:,class_l_index]
 
     # Compute tangent vectors and neighborhood radius parameter r:
     from Local_PCA import Local_PCA
-    DICT_full_stacked, r_1 = Local_PCA( X_train_stacked, quant_train, d_vect, n )
+    DICT_full_stacked, r_1 = Local_PCA( X_tr_stacked, quant_train, d_vect, n )
     
     # Write DICT_full_stacked as a 2D matrix and compute label vector as well
     # as an index vector of training points in DICT_full:
@@ -100,7 +100,7 @@ def LPCA_SRC_func( X_train, lab, X_test, ulab_GT, epsilon=None, occ_on=None, n=N
     lab_DICT_full = np.zeros((1,int(np.dot(quant_train.T,(d_vect+1)))))
     train_pt_ind = np.zeros((n_train,1))
     # Note that lab_DICT_full(train_pt_ind(i)) will retrieve the class of the
-    # ith training point in X_train.
+    # ith training point in X_tr.
 
     count_1 = 0
     count_2 = 0 
@@ -119,31 +119,31 @@ def LPCA_SRC_func( X_train, lab, X_test, ulab_GT, epsilon=None, occ_on=None, n=N
 
     # Extract information from test data:
 
-    _, n_test = np.shape(X_test)
+    _, n_te = np.shape(X_te)
 
     # Normalize test data:
-    X_test_norm = Normalize(X_test)
+    X_te_norm = Normalize(X_te)
     
     # Compute average number of columns in dictionary after r constraint:
-    len_DICT = np.zeros((n_test,1))
+    len_DICT = np.zeros((n_te,1))
 
     # Initialize test label vector:
-    ulab = np.zeros((n_test,1))
+    ulab = np.zeros((n_te,1))
 
     # Begin classification:
 
-    for j in range(n_test):
-        y = X_test_norm[:,j]
+    for j in range(n_te):
+        y = X_te_norm[:,j]
     
         DICT_y = np.zeros((np.shape(DICT_full)))
         _, col_num = np.shape(DICT_y)
         lab_DICT_y = np.zeros((col_num,1)) # will contain labels
 
         # Compute distances between the test point and each training point:
-        dist_vects_pos = np.tile(y,(n_train,1)).T-X_train_norm
+        dist_vects_pos = np.tile(y,(n_tr,1)).T-X_tr_norm
         DIST_pos = np.sqrt(sum(dist_vects_pos**2))
 
-        dist_vects_neg = np.tile(y,(n_train,1)).T+X_train_norm
+        dist_vects_neg = np.tile(y,(n_tr,1)).T+X_tr_norm
         DIST_neg = np.sqrt(sum(dist_vects_neg**2))
     
         # Compute minimum distance from y to a class rep
