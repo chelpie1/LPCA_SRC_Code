@@ -9,7 +9,7 @@ This is a function to compute and store tangent basis vectors for use in
 the LPCA-SRC classification algorithm. It uses the local PCA technique of 
 Singer and Wu (2012) to compute the tangent vectors. 
 
-Inputs: X_train_stacked: A 3D array of training data, with first
+Inputs: X_tr_stacked: A 3D array of training data, with first
             dimension corresponding to feature, second dimension 
             corresponding to training sample, and third dimension 
             corresponding to class
@@ -34,7 +34,7 @@ Inputs: X_train_stacked: A 3D array of training data, with first
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
-def Local_PCA( X_train_stacked, quant_train, d_vect=None, n=None ):
+def Local_PCA( X_tr_stacked, quant_train, d_vect=None, n=None ):
     
     if d_vect is None:
         d_vect=np.ones((len(quant_train),1))
@@ -44,7 +44,7 @@ def Local_PCA( X_train_stacked, quant_train, d_vect=None, n=None ):
 
     n = int(n)
 
-    [m,_,L] = np.shape(X_train_stacked)
+    [m,_,L] = np.shape(X_tr_stacked)
 
     # Initialize matrix that will store results:
     DICT_full_stacked = np.zeros((m, int((np.max(d_vect)+1)*np.max(quant_train)), L))
@@ -58,10 +58,10 @@ def Local_PCA( X_train_stacked, quant_train, d_vect=None, n=None ):
         N_l = int(quant_train[l])
         d_l = int(d_vect[l])
         
-        X_train_l = X_train_stacked[:,0:N_l,l]
+        X_tr_l = X_tr_stacked[:,0:N_l,l]
 
-        nbrs = NearestNeighbors(n_neighbors=n+2).fit(X_train_l.T)
-        D,_ = nbrs.kneighbors(X_train_l.T)
+        nbrs = NearestNeighbors(n_neighbors=n+2).fit(X_tr_l.T)
+        D,_ = nbrs.kneighbors(X_tr_l.T)
         for i in range(N_l):
             PREP_r_1[i,l] = D[i,-1]
 
@@ -70,17 +70,17 @@ def Local_PCA( X_train_stacked, quant_train, d_vect=None, n=None ):
     # Compute tangent vectors:
     for l in range(L):     
         DICT_Class_l = np.zeros((m,N_l*(d_l+1)))
-        X_train_l = X_train_stacked[:,0:N_l,l]
-        nbrs = NearestNeighbors(n_neighbors=n+2).fit(X_train_l.T)
+        X_tr_l = X_tr_stacked[:,0:N_l,l]
+        nbrs = NearestNeighbors(n_neighbors=n+2).fit(X_tr_l.T)
         for i in range(N_l):
-            x_i = X_train_l[:,i]
+            x_i = X_tr_l[:,i]
             DICT_x_i = np.zeros((m,d_l+1))
             # Will contain x_i and the shifted 
             # and scaled tangent plane basis vectors at x_i.
            
             # Find the n-nearest neighbors of x_i in the same class:
-            DIST,IDX = nbrs.kneighbors(X_train_l.T)
-            Neighbors_i = X_train_l[:,IDX[i,:]]
+            DIST,IDX = nbrs.kneighbors(X_tr_l.T)
+            Neighbors_i = X_tr_l[:,IDX[i,:]]
             Neighbors_i = Neighbors_i[:,1:] # delete the first column since 
                                            # corresponds to x_i
 
